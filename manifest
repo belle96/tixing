@@ -1,0 +1,17 @@
+#
+# this is your module manifest and used by Titanium
+# during compilation, packaging, distribution, etc.
+#
+version: 0.1
+description: My module
+author: Your Name
+license: Specify your license
+copyright: Copyright (c) 2010 by Your Company
+
+
+# these should not be edited
+name: tixing
+moduleid: com.github.sspinc.tixing
+guid: 4bf9864e-9be6-4ada-a131-47d9cc5301c4
+platform: android
+minsdk: 1.5.0
