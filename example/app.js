@@ -1,6 +1,6 @@
 // This is a test harness for your module
-// You should do something interesting in this harness 
-// to test out the module and to provide instructions 
+// You should do something interesting in this harness
+// to test out the module and to provide instructions
 // to users on how to use it by example.
 
 
@@ -12,16 +12,9 @@ var label = Ti.UI.createLabel();
 window.add(label);
 window.open();
 
-// TODO: write your module tests here
 var tixing = require('com.github.sspinc.tixing');
 Ti.API.info("module is => " + tixing);
 
-label.text = tixing.example();
+tixing.initiateScan();
+label.text = "initiated scan";
 
-Ti.API.info("module exampleProp is => " + tixing.exampleProp);
-tixing.exampleProp = "This is a test value";
-
-if (Ti.Platform.name == "android") {
-	var proxy = tixing.createExample({message: "Creating an example Proxy"});
-	proxy.printMessage("Hello world!");
-}

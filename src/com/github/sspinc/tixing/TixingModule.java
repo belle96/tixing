@@ -8,6 +8,9 @@
  */
 package com.github.sspinc.tixing;
 
+import com.google.zxing.integration.android.IntentIntegrator;
+import com.google.zxing.integration.android.IntentResult;
+
 import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.annotations.Kroll;
 
@@ -15,39 +18,42 @@ import org.appcelerator.titanium.TiContext;
 import org.appcelerator.titanium.util.Log;
 import org.appcelerator.titanium.util.TiConfig;
 
+import android.content.Intent;
+
 @Kroll.module(name="Tixing", id="com.github.sspinc.tixing")
 public class TixingModule extends KrollModule
 {
-
 	// Standard Debugging variables
 	private static final String LCAT = "TixingModule";
 	private static final boolean DBG = TiConfig.LOGD;
 
-	// You can define constants with @Kroll.constant, for example:
-	// @Kroll.constant public static final String EXTERNAL_NAME = value;
-	
 	public TixingModule(TiContext tiContext) {
 		super(tiContext);
 	}
 
-	// Methods
-	@Kroll.method
-	public String example() {
-		Log.d(LCAT, "example called");
-		return "hello world";
-	}
-	
-	// Properties
-	@Kroll.getProperty
-	public String getExampleProp() {
-		Log.d(LCAT, "get example property");
-		return "hello world";
-	}
-	
-	
-	@Kroll.setProperty
-	public void setExampleProp(String value) {
-		Log.d(LCAT, "set example property: " + value);
+  @Kroll.method
+  public void initiateScan() {
+    logInfo("initiateScan()");
+    IntentIntegrator.initiateScan(getTiContext().getActivity());
+  }
+
+  protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+    IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
+    if (scanResult != null) {
+      logInfo("Format: " + scanResult.getFormatName());
+      logInfo("Barcode: " + scanResult.getContents());
+    }
+  }
+
+	private void logError(final String msg) {
+		Log.e(LCAT, msg);
 	}
 
+	private void logInfo(final String msg) {
+		Log.i(LCAT, msg);
+	}
+
+	private void logDebug(final String msg) {
+    Log.d(LCAT, msg);
+	}
 }
