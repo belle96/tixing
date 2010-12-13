@@ -46,10 +46,11 @@ public class TixingModule extends KrollModule
   public void scan(final KrollDict options) throws Exception {
     initiateScan(getCallback(options, "success"),
           getCallback(options, "cancel"),
-          getCallback(options, "error"));
+          getCallback(options, "error"),
+          options.containsKey("formats") ? (String)options.get("formats") : IntentIntegrator.PRODUCT_CODE_TYPES);
   }
 
-  private void initiateScan(final KrollCallback successCallback, final KrollCallback cancelCallback, final KrollCallback errorCallback) throws Exception {
+  private void initiateScan(final KrollCallback successCallback, final KrollCallback cancelCallback, final KrollCallback errorCallback, final CharSequence supportedBarcodeFormats) throws Exception {
     final TiRootActivity activity = (TiRootActivity)getTiContext().getActivity();
     final Method getSupportHelperMethod = TiRootActivity.class.getDeclaredMethod("getSupportHelper");
     getSupportHelperMethod.setAccessible(true);
@@ -59,15 +60,15 @@ public class TixingModule extends KrollModule
       public void onResult(Activity activity, int requestCode, int resultCode, Intent intent) {
         IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
         if (resultCode == Activity.RESULT_OK) {
-          logInfo(String.format("onResult: (RESULT_OK, Format: %s, Contents: %s)", scanResult.getFormatName(), scanResult.getContents()));
+          logDebug(String.format("onResult: (RESULT_OK, Format: %s, Contents: %s)", scanResult.getFormatName(), scanResult.getContents()));
           if (successCallback != null) {
             successCallback.callAsync(getResultData(scanResult));
           }
         } else {
           if (resultCode == Activity.RESULT_CANCELED) {
-            logInfo("onResult: (RESULT_CANCELED)");
+            logDebug("onResult: (RESULT_CANCELED)");
           } else {
-            logInfo(String.format("onResult: (RESULT_UNKNOWN, resultCode: %d)", resultCode));
+            logDebug(String.format("onResult: (RESULT_UNKNOWN, resultCode: %d)", resultCode));
           }
           if (cancelCallback != null) {
             cancelCallback.callAsync();
@@ -76,15 +77,15 @@ public class TixingModule extends KrollModule
       }
 
       public void onError(Activity activity, int requestCode, Exception e) {
-        logError(String.format("onError: (exception.message: %s)", e.getMessage()));
+        logError(String.format("onError: (Message: %s)", e.getMessage()));
         if (errorCallback != null) {
           errorCallback.callAsync(createErrorResponse(UNKNOWN_ERROR, e.getMessage()));
         }
       }
     });
 
-    logInfo("initiateScan()");
-    IntentIntegrator.initiateScan(activity);
+    logDebug(String.format("initiateScan(): (formats: %s)", supportedBarcodeFormats));
+    IntentIntegrator.initiateScan(activity, supportedBarcodeFormats);
   }
 
   private KrollDict getResultData(IntentResult scanResult) {
