@@ -11,14 +11,22 @@ package com.github.sspinc.tixing;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
+import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.annotations.Kroll;
 
+import org.appcelerator.titanium.TiRootActivity;
 import org.appcelerator.titanium.TiContext;
+import org.appcelerator.titanium.kroll.KrollCallback;
 import org.appcelerator.titanium.util.Log;
+import org.appcelerator.titanium.util.TiActivitySupportHelper;
+import org.appcelerator.titanium.util.TiActivityResultHandler;
 import org.appcelerator.titanium.util.TiConfig;
 
+import android.app.Activity;
 import android.content.Intent;
+
+import java.lang.reflect.Method;
 
 @Kroll.module(name="Tixing", id="com.github.sspinc.tixing")
 public class TixingModule extends KrollModule
@@ -27,26 +35,75 @@ public class TixingModule extends KrollModule
 	private static final String LCAT = "TixingModule";
 	private static final boolean DBG = TiConfig.LOGD;
 
+  @Kroll.constant public static final int UNKNOWN_ERROR = 0;
+
+
 	public TixingModule(TiContext tiContext) {
 		super(tiContext);
 	}
 
   @Kroll.method
-  public void initiateScan() {
-    logInfo("initiateScan()");
-    IntentIntegrator.initiateScan(getTiContext().getActivity());
+  public void scan(final KrollDict options) throws Exception {
+    initiateScan(getCallback(options, "success"),
+          getCallback(options, "cancel"),
+          getCallback(options, "error"));
   }
 
-  protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
-    IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
-    if (scanResult != null) {
-      logInfo("Format: " + scanResult.getFormatName());
-      logInfo("Barcode: " + scanResult.getContents());
-    }
+  private void initiateScan(final KrollCallback successCallback, final KrollCallback cancelCallback, final KrollCallback errorCallback) throws Exception {
+    final TiRootActivity activity = (TiRootActivity)getTiContext().getActivity();
+    final Method getSupportHelperMethod = TiRootActivity.class.getDeclaredMethod("getSupportHelper");
+    getSupportHelperMethod.setAccessible(true);
+    final TiActivitySupportHelper supportHelper = (TiActivitySupportHelper)getSupportHelperMethod.invoke(activity);
+
+    supportHelper.registerResultHandler(IntentIntegrator.REQUEST_CODE, new TiActivityResultHandler() {
+      public void onResult(Activity activity, int requestCode, int resultCode, Intent intent) {
+        IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
+        if (resultCode == Activity.RESULT_OK) {
+          logInfo(String.format("onResult: (RESULT_OK, Format: %s, Contents: %s)", scanResult.getFormatName(), scanResult.getContents()));
+          if (successCallback != null) {
+            successCallback.callAsync(getResultData(scanResult));
+          }
+        } else {
+          if (resultCode == Activity.RESULT_CANCELED) {
+            logInfo("onResult: (RESULT_CANCELED)");
+          } else {
+            logInfo(String.format("onResult: (RESULT_UNKNOWN, resultCode: %d)", resultCode));
+          }
+          if (cancelCallback != null) {
+            cancelCallback.callAsync();
+          }
+        }
+      }
+
+      public void onError(Activity activity, int requestCode, Exception e) {
+        logError(String.format("onError: (exception.message: %s)", e.getMessage()));
+        if (errorCallback != null) {
+          errorCallback.callAsync(createErrorResponse(UNKNOWN_ERROR, e.getMessage()));
+        }
+      }
+    });
+
+    logInfo("initiateScan()");
+    IntentIntegrator.initiateScan(activity);
   }
+
+  private KrollDict getResultData(IntentResult scanResult) {
+    final KrollDict resultDict = new KrollDict();
+    resultDict.put("barcode", scanResult.getContents());
+    resultDict.put("symbology", scanResult.getFormatName());
+    return resultDict;
+  }
+
+  private KrollCallback getCallback(final KrollDict options, final String name) {
+		return (KrollCallback)(options.containsKey(name) ? options.get(name) : null);
+	}
 
 	private void logError(final String msg) {
 		Log.e(LCAT, msg);
+	}
+
+	private void logWarn(final String msg) {
+		Log.w(LCAT, msg);
 	}
 
 	private void logInfo(final String msg) {
